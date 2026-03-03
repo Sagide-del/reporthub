@@ -1,6 +1,8 @@
 ﻿import os
+import sys
 import json
 import base64
+import tempfile
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -19,7 +21,17 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///reporthub.db')
+
+# Database configuration for Vercel
+if os.getenv('VERCEL_ENV'):
+    # On Vercel, use SQLite in /tmp directory (writable)
+    db_path = os.path.join(tempfile.gettempdir(), 'reporthub.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print(f"Using database at: {db_path}")
+else:
+    # Local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///reporthub.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
@@ -134,41 +146,30 @@ class MpesaPayment:
         self.phone_number = os.getenv('MPESA_PHONE_NUMBER', '254748519923')
         self.environment = os.getenv('MPESA_ENVIRONMENT', 'sandbox')
         
-        # Base URLs
         if self.environment == 'production':
             self.base_url = 'https://api.safaricom.co.ke'
         else:
             self.base_url = 'https://sandbox.safaricom.co.ke'
     
     def get_access_token(self):
-        """Get OAuth access token"""
         url = f'{self.base_url}/oauth/v1/generate?grant_type=client_credentials'
-        
-        response = requests.get(
-            url, 
-            auth=(self.consumer_key, self.consumer_secret)
-        )
-        
+        response = requests.get(url, auth=(self.consumer_key, self.consumer_secret))
         if response.status_code == 200:
             return response.json()['access_token']
         else:
             raise Exception(f"Failed to get access token: {response.text}")
     
     def stk_push(self, customer_phone, amount, account_reference='ReportHub'):
-        """Initiate STK Push to customer"""
         try:
             access_token = self.get_access_token()
             url = f'{self.base_url}/mpesa/stkpush/v1/processrequest'
             
-            # Format customer phone
             if customer_phone.startswith('0'):
                 customer_phone = '254' + customer_phone[1:]
             elif customer_phone.startswith('7'):
                 customer_phone = '254' + customer_phone
             
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            
-            # Generate password
             password_str = self.business_shortcode + self.passkey + timestamp
             password = base64.b64encode(password_str.encode()).decode()
             
@@ -199,7 +200,6 @@ class MpesaPayment:
 
 # ==================== Calculation Functions ====================
 def calculate_final_score(cat1, cat2, end_term_exam):
-    """Calculate final score based on the weighting system"""
     try:
         cat1 = float(cat1) if cat1 else 0
         cat2 = float(cat2) if cat2 else 0
@@ -213,7 +213,6 @@ def calculate_final_score(cat1, cat2, end_term_exam):
         return 0
 
 def get_grade(score):
-    """Determine grade based on score"""
     try:
         score = float(score)
         if score >= 80: return 'A'
@@ -231,36 +230,6 @@ def get_grade(score):
     except:
         return 'N/A'
 
-def get_remarks(grade):
-    """Generate remarks based on grade"""
-    remarks = {
-        'A': 'Excellent performance! Keep it up.',
-        'A-': 'Very good performance. Maintain the momentum.',
-        'B+': 'Good performance. Room for improvement.',
-        'B': 'Satisfactory performance. Work harder.',
-        'B-': 'Fair performance. Need more effort.',
-        'C+': 'Average performance. Significant improvement needed.',
-        'C': 'Below average. Seek help where necessary.',
-        'C-': 'Poor performance. Urgent intervention required.',
-        'D+': 'Very poor performance. Parental guidance needed.',
-        'D': 'Critical intervention required.',
-        'D-': 'Academic warning issued.',
-        'E': 'Repeat subject recommended.'
-    }
-    return remarks.get(grade, 'Performance needs improvement.')
-
-# ==================== Decorators ====================
-def subscription_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return redirect(url_for('login'))
-        if not current_user.is_subscription_valid():
-            flash('Your subscription has expired. Please renew to continue.', 'warning')
-            return redirect(url_for('subscribe'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 # ==================== Routes ====================
 @app.route('/')
 def index():
@@ -274,40 +243,28 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        remember = True if request.form.get('remember') else False
         
         user = User.query.filter_by(email=email).first()
         
         if not user or not user.check_password(password):
-            flash('Please check your login details and try again.', 'danger')
-            return redirect(url_for('login'))
+            return jsonify({'error': 'Invalid credentials'}), 401
         
-        login_user(user, remember=remember)
+        login_user(user)
         return redirect(url_for('dashboard'))
     
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    
     if request.method == 'POST':
         email = request.form.get('email')
         username = request.form.get('username')
         password = request.form.get('password')
-        phone = request.form.get('phone')
         
-        user = User.query.filter_by(email=email).first()
-        if user:
-            flash('Email address already exists', 'danger')
-            return redirect(url_for('register'))
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already exists'}), 400
         
-        new_user = User(
-            email=email, 
-            username=username,
-            phone_number=phone
-        )
+        new_user = User(email=email, username=username)
         new_user.set_password(password)
         
         db.session.add(new_user)
@@ -317,25 +274,10 @@ def register():
     
     return render_template('register.html')
 
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
-
 @app.route('/dashboard')
 @login_required
-@subscription_required
 def dashboard():
-    students_count = Student.query.filter_by(user_id=current_user.id).count()
-    subjects_count = Subject.query.filter_by(user_id=current_user.id).count()
-    results_count = Result.query.join(Student).filter(Student.user_id == current_user.id).count()
-    
-    return render_template('dashboard.html', 
-                         user=current_user,
-                         students_count=students_count,
-                         subjects_count=subjects_count,
-                         results_count=results_count)
+    return render_template('dashboard.html', user=current_user)
 
 @app.route('/subscribe')
 def subscribe():
@@ -345,86 +287,18 @@ def subscribe():
 def mpesa_stkpush():
     try:
         data = request.json
-        customer_phone = data.get('phone')
-        amount = data.get('amount')
-        plan = data.get('plan')
-        user_id = data.get('user_id')
-        
-        # Initialize M-PESA
         mpesa = MpesaPayment()
-        
-        # Send STK Push
         response = mpesa.stk_push(
-            customer_phone=customer_phone,
-            amount=amount,
-            account_reference=f"REPORTHUB-{plan}"
+            customer_phone=data.get('phone'),
+            amount=data.get('amount'),
+            account_reference=f"REPORTHUB-{data.get('plan')}"
         )
-        
-        # Save payment record
-        if 'CheckoutRequestID' in response:
-            payment = Payment(
-                user_id=user_id,
-                phone_number=customer_phone,
-                amount=amount,
-                plan=plan,
-                checkout_request_id=response['CheckoutRequestID'],
-                merchant_request_id=response.get('MerchantRequestID'),
-                status='pending'
-            )
-            db.session.add(payment)
-            db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'STK Push sent successfully',
-            'data': response
-        })
-        
+        return jsonify({'success': True, 'data': response})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/mpesa-callback', methods=['POST'])
-def mpesa_callback():
-    """M-PESA callback URL"""
-    data = request.json
-    
-    if data and 'Body' in data:
-        stk_callback = data['Body']['stkCallback']
-        checkout_id = stk_callback['CheckoutRequestID']
-        result_code = stk_callback['ResultCode']
-        
-        payment = Payment.query.filter_by(checkout_request_id=checkout_id).first()
-        
-        if payment:
-            if result_code == 0:
-                # Successful payment
-                payment.status = 'completed'
-                payment.mpesa_receipt = stk_callback['CallbackMetadata']['Item'][1]['Value']
-                payment.transaction_date = datetime.now()
-                
-                # Activate user subscription
-                user = User.query.get(payment.user_id)
-                user.subscription_active = True
-                if payment.plan == 'monthly':
-                    user.subscription_end = datetime.now() + timedelta(days=30)
-                elif payment.plan == 'quarterly':
-                    user.subscription_end = datetime.now() + timedelta(days=90)
-                elif payment.plan == 'yearly':
-                    user.subscription_end = datetime.now() + timedelta(days=365)
-                user.subscription_plan = payment.plan
-            else:
-                payment.status = 'failed'
-            
-            db.session.commit()
-    
-    return jsonify({"ResultCode": 0, "ResultDesc": "Success"})
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/process_excel', methods=['POST'])
 @login_required
-@subscription_required
 def process_excel():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -432,7 +306,7 @@ def process_excel():
     file = request.files['file']
     
     try:
-        if file.filename.endswith('.xlsx') or file.filename.endswith('.xls'):
+        if file.filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(file)
         else:
             return jsonify({'error': 'Please upload an Excel file'}), 400
@@ -445,18 +319,15 @@ def process_excel():
                 row.get('end_term_exam', 0)
             )
             grade = get_grade(final_score)
-            remarks = get_remarks(grade)
             
             results.append({
                 'name': row.get('name', 'Unknown'),
-                'admission': row.get('admission', ''),
                 'subject': row.get('subject', 'Unknown'),
                 'cat1': float(row.get('cat1', 0)),
                 'cat2': float(row.get('cat2', 0)),
                 'exam': float(row.get('end_term_exam', 0)),
                 'final_score': final_score,
-                'grade': grade,
-                'remarks': remarks
+                'grade': grade
             })
         
         return jsonify({'success': True, 'results': results})
@@ -466,102 +337,26 @@ def process_excel():
 
 @app.route('/api/analyze_performance', methods=['POST'])
 @login_required
-@subscription_required
 def analyze_performance():
     try:
         data = request.json
-        
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert educational analyst. Provide detailed performance analysis and recommendations."},
-                {"role": "user", "content": f"Analyze this student's performance data and provide insights: {json.dumps(data)}"}
-            ],
-            max_tokens=500,
-            temperature=0.7
+                {"role": "system", "content": "You are an educational analyst."},
+                {"role": "user", "content": f"Analyze this performance: {json.dumps(data)}"}
+            ]
         )
-        
-        return jsonify({
-            'success': True,
-            'analysis': response.choices[0].message.content
-        })
-        
+        return jsonify({'success': True, 'analysis': response.choices[0].message.content})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/career_assessment', methods=['POST'])
-@login_required
-@subscription_required
-def career_assessment():
-    try:
-        data = request.json
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a career guidance expert. Provide detailed career recommendations based on academic performance and interests."},
-                {"role": "user", "content": f"Based on this student's profile, suggest career paths and required subjects: {json.dumps(data)}"}
-            ],
-            max_tokens=600,
-            temperature=0.7
-        )
-        
-        return jsonify({
-            'success': True,
-            'assessment': response.choices[0].message.content
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/school/update', methods=['POST'])
-@login_required
-@subscription_required
-def update_school():
-    try:
-        current_user.school_name = request.form.get('school_name')
-        current_user.school_address = request.form.get('school_address')
-        current_user.school_phone = request.form.get('school_phone')
-        current_user.school_email = request.form.get('school_email')
-        
-        if 'logo' in request.files:
-            logo = request.files['logo']
-            if logo.filename:
-                # Save logo logic here
-                pass
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'School details updated'})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Create database tables
+# Create tables
 with app.app_context():
     db.create_all()
-    
-    # Add default subjects if none exist
-    if Subject.query.count() == 0:
-        default_subjects = [
-            {'name': 'Mathematics', 'code': 'MATH'},
-            {'name': 'English', 'code': 'ENG'},
-            {'name': 'Kiswahili', 'code': 'KISW'},
-            {'name': 'Biology', 'code': 'BIO'},
-            {'name': 'Chemistry', 'code': 'CHEM'},
-            {'name': 'Physics', 'code': 'PHY'},
-            {'name': 'History', 'code': 'HIST'},
-            {'name': 'Geography', 'code': 'GEO'},
-            {'name': 'CRE', 'code': 'CRE'},
-            {'name': 'Business Studies', 'code': 'BUS'},
-            {'name': 'Agriculture', 'code': 'AGR'},
-            {'name': 'Computer Studies', 'code': 'COMP'}
-        ]
-        for subject in default_subjects:
-            db.session.add(Subject(**subject))
-        db.session.commit()
+    print("Database tables created successfully!")
 
-# This is needed for Vercel
+# Vercel handler
 app = app
 
 if __name__ == '__main__':
