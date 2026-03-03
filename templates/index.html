@@ -1,0 +1,80 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Home - ReportHub{% endblock %}
+
+{% block content %}
+<div class="hero text-center">
+    <div class="container">
+        <h1 class="display-4">Welcome to ReportHub</h1>
+        <p class="lead">The Ultimate AI-Powered Student Management System</p>
+        {% if not current_user.is_authenticated %}
+        <a href="/register" class="btn btn-light btn-lg mt-3 me-2">Get Started</a>
+        <a href="/login" class="btn btn-outline-light btn-lg mt-3">Login</a>
+        {% else %}
+        <a href="/dashboard" class="btn btn-light btn-lg mt-3">Go to Dashboard</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container py-5">
+    <h2 class="text-center mb-5">Powerful Features for Modern Education</h2>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Student Management</h3>
+                <p>Easily manage student records, classes, and streams with our intuitive interface.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>CBC Grade Generator</h3>
+                <p>Generate competency-based curriculum grades with automatic calculations.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <h3>PDF Report Cards</h3>
+                <p>Generate professional PDF report cards ready for printing and distribution.</p>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-upload"></i>
+                </div>
+                <h3>Bulk CSV Upload</h3>
+                <p>Upload hundreds of student records at once with CSV file support.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Analysis</h3>
+                <p>Get AI-powered insights on student performance and improvement areas.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h3>Career Assessment</h3>
+                <p>AI-guided career recommendations based on student performance and interests.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

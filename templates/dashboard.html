@@ -1,0 +1,83 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Dashboard - ReportHub{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="fas fa-tachometer-alt"></i> Welcome, {{ current_user.username }}!</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h5>Students</h5>
+                                    <h2>{{ students_count|default(0) }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h5>Subjects</h5>
+                                    <h2>{{ subjects_count|default(0) }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h5>Results</h5>
+                                    <h2>{{ results_count|default(0) }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h5>Terms</h5>
+                                    <h2>3</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-file-upload"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="#" class="btn btn-primary">Upload Excel/CSV</a>
+                        <a href="#" class="btn btn-success">Generate Report Cards</a>
+                        <a href="#" class="btn btn-info">Add New Student</a>
+                        <a href="#" class="btn btn-warning">AI Performance Analysis</a>
+                        <a href="#" class="btn btn-secondary">Career Assessment</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <p>No recent activity</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

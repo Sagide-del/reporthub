@@ -304,19 +304,7 @@ def generate_report_card_pdf(student_id, term, year):
 # ==================== Routes ====================
 @app.route('/')
 def index():
-    return jsonify({
-        "message": "ReportHub API",
-        "version": "2.0.0",
-        "features": [
-            "Student Management",
-            "CBC Grade Generator",
-            "Admin Dashboard",
-            "PDF Report Cards",
-            "Bulk CSV Upload",
-            "AI Analysis"
-        ],
-        "status": "production"
-    })
+    return render_template('index.html')
 
 @app.route('/api/health')
 def health():
