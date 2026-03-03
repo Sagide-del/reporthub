@@ -39,3 +39,8 @@ Thumbs.db
 # Uploads
 uploads/
 temp/
+.vercel
+.env
+
+.env
+
