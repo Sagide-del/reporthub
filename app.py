@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify
+﻿﻿from flask import Flask, jsonify
 import os
 
 app = Flask(__name__)
@@ -8,3 +8,4 @@ def home():
     return jsonify({"message": "ReportHub is LIVE!", "status": "success"})
 
 app = app
+
