@@ -5,9 +5,6 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return jsonify({
-        "message": "ReportHub API - Clean Deployment",
-        "status": "success"
-    })
+    return jsonify({"message": "ReportHub is LIVE!", "status": "success"})
 
 app = app
