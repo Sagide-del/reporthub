@@ -4,3 +4,8 @@ flask-login==0.6.2
 gunicorn==21.2.0
 python-dotenv==1.0.0
 openai==0.28.0
+pandas==2.0.3
+numpy==1.24.3
+requests==2.31.0
+openpyxl==3.1.2
+pillow==10.0.0
