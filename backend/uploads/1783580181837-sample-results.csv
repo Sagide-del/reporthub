@@ -1,0 +1,6 @@
+?AdmissionNumber,FirstName,LastName,Mathematics_CAT1,Mathematics_CAT2,Mathematics_END,Biology_CAT1,Biology_CAT2,Biology_END,Chemistry_CAT1,Chemistry_CAT2,Chemistry_END,Physics_CAT1,Physics_CAT2,Physics_END,English_CAT1,English_CAT2,English_END,Kiswahili_CAT1,Kiswahili_CAT2,Kiswahili_END,CRE_CAT1,CRE_CAT2,CRE_END,Geography_CAT1,Geography_CAT2,Geography_END,Business_CAT1,Business_CAT2,Business_END,History_CAT1,History_CAT2,History_END
+EX001,Jane,Muthoni,75,80,70,65,70,60,80,85,75,70,75,65,85,90,80,70,75,65,80,85,75,75,80,70,80,85,75,70,75,65
+EX002,Peter,Ochieng,60,65,55,70,75,65,55,60,50,80,85,75,65,70,60,75,80,70,70,75,65,65,70,60,70,75,65,80,85,75
+EX003,Amina,Hassan,85,90,80,75,80,70,90,95,85,65,70,60,90,95,85,80,85,75,85,90,80,80,85,75,85,90,80,75,80,70
+EX004,David,Kiprop,70,75,65,80,85,75,65,70,60,75,80,70,75,80,70,65,70,60,75,80,70,70,75,65,75,80,70,85,90,80
+EX005,Sarah,Wanjiru,90,95,85,85,90,80,75,80,70,80,85,75,85,90,80,90,95,85,80,85,75,85,90,80,80,85,75,90,95,85
